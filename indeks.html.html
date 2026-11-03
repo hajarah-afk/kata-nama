@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kembara Kata: Larian Kata Nama Am</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Fredoka', cursive, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #0c1322;
+            overflow: hidden;
+        }
+
+        .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .glow-button {
+            transition: all 0.2s ease;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+        .glow-button:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.7);
+        }
+        .glow-button:active {
+            transform: translateY(1px) scale(0.98);
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col justify-between relative text-white">
+
+    <!-- CANVAS UTAMA PERMAINAN -->
+    <canvas id="gameCanvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+
+    <!-- UI OVERLAY LAYER -->
+    <div id="uiOverlay" class="relative z-10 w-full h-full flex flex-col justify-between pointer-events-none p-4 md:p-6">
+        
+        <!-- HUD ATAS: SKOR, MISI, NYAWA -->
+        <div id="topHUD" class="w-full flex justify-between items-start gap-4 pointer-events-auto">
+            
+            <!-- Nyawa & Level -->
+            <div class="glass-card px-4 py-2.5 rounded-2xl flex items-center gap-3 shadow-xl">
+                <span class="bg-gradient-to-r from-purple-500 to-indigo-600 px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider text-white">
+                    Aras 4
+                </span>
+                <div id="heartsContainer" class="flex items-center gap-1.5 text-xl text-rose-500">
+                    <i class="fa-solid fa-heart"></i>
+                    <i class="fa-solid fa-heart"></i>
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+            </div>
+
+            <!-- MISI SEMASA BANNER -->
+            <div id="missionCard" class="glass-card px-6 py-3 rounded-2xl flex flex-col items-center shadow-xl border-cyan-500/40 text-center max-w-md animate-pulse">
+                <span class="text-[11px] font-bold uppercase tracking-widest text-cyan-400">
+                    <i class="fa-solid fa-bullseye mr-1"></i> Misi Semasa
+                </span>
+                <h2 id="missionText" class="text-base md:text-xl font-black text-amber-300 drop-shadow">
+                    Kumpul Kata Nama Am ABSTRAK
+                </h2>
+            </div>
+
+            <!-- Skor & Jarak -->
+            <div class="glass-card px-5 py-2.5 rounded-2xl flex items-center gap-4 shadow-xl border-emerald-500/30">
+                <div class="text-right">
+                    <div class="text-[10px] uppercase font-bold text-slate-400">Skor</div>
+                    <div id="scoreText" class="text-2xl font-black text-emerald-400 font-outfit">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANDUAN KAWALAN DI BAWAH SKRIN -->
+        <div class="w-full flex justify-between items-end pointer-events-auto">
+            <div class="glass-card px-4 py-2 rounded-2xl text-xs text-slate-300 flex items-center gap-3">
+                <span class="bg-slate-800 px-2 py-1 rounded font-mono font-bold text-cyan-300">↑ / W</span>
+                <span class="bg-slate-800 px-2 py-1 rounded font-mono font-bold text-cyan-300">↓ / S</span>
+                <span>Tukar Lorong | Akses Butang Sentuh pada Skrin Telefon</span>
+            </div>
+
+            <!-- Mobile Touch Controls -->
+            <div class="flex md:hidden gap-3">
+                <button id="btnUp" class="w-14 h-14 bg-slate-800/80 active:bg-cyan-600 rounded-2xl border border-cyan-400/50 flex items-center justify-center text-2xl text-cyan-300 shadow-lg">
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+                <button id="btnDown" class="w-14 h-14 bg-slate-800/80 active:bg-cyan-600 rounded-2xl border border-cyan-400/50 flex items-center justify-center text-2xl text-cyan-300 shadow-lg">
+                    <i class="fa-solid fa-arrow-down"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL MENU MULA -->
+    <div id="startModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+        <div class="glass-card w-full max-w-xl rounded-3xl p-6 md:p-8 text-center border-cyan-500/40 relative overflow-hidden flex flex-col gap-6 shadow-2xl">
+            <div class="relative z-10">
+                <div class="inline-block px-4 py-1 bg-cyan-500/20 rounded-full text-cyan-300 font-bold text-xs uppercase tracking-widest mb-3 border border-cyan-500/30">
+                    Permainan Larian Endless 2D
+                </div>
+                <h1 class="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300">
+                    KEMBARA KATA RUNNER
+                </h1>
+                <p class="text-slate-300 text-sm md:text-base mt-2">
+                    Lari dan kumpulkan Kata Nama Am yang tepat mengikut misi untuk mencapai skor tertinggi!
+                </p>
+            </div>
+
+            <!-- CARA MAIN -->
+            <div class="grid grid-cols-2 gap-3 text-left">
+                <div class="glass-card p-3.5 rounded-2xl border-slate-700/60 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-arrows-up-down"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-xs text-white">Tukar Lorong</div>
+                        <div class="text-[11px] text-slate-400">Guna kunci Arrow Up/Down atau Butang Sentuh.</div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-3.5 rounded-2xl border-slate-700/60 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-xs text-white">Ikut Misi</div>
+                        <div class="text-[11px] text-slate-400">Ambil perkataan betul, elak perkataan yang salah.</div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnStart" class="glow-button w-full py-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 rounded-2xl text-xl font-black text-white shadow-xl flex items-center justify-center gap-3">
+                <i class="fa-solid fa-play text-2xl"></i> MULA LARIAN
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL KEPUTUSAN (GAME OVER) -->
+    <div id="resultsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="glass-card w-full max-w-2xl max-h-[90vh] rounded-3xl p-6 md:p-8 flex flex-col gap-5 border-indigo-500/40 shadow-2xl overflow-hidden">
+            <div class="text-center">
+                <h2 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-500">
+                    LARIAN TAMAT!
+                </h2>
+                <p class="text-slate-300 text-sm mt-1">Berikut ialah prestasi larian dan analisis perkataan anda.</p>
+            </div>
+
+            <!-- RINGKASAN STIKER -->
+            <div class="grid grid-cols-3 gap-3 text-center">
+                <div class="glass-card p-3 rounded-2xl border-emerald-500/30">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold">Skor Akhir</div>
+                    <div id="finalScore" class="text-2xl font-black text-emerald-400 font-outfit mt-0.5">0</div>
+                </div>
+                <div class="glass-card p-3 rounded-2xl border-cyan-500/30">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold">Perkataan Betul</div>
+                    <div id="finalCorrect" class="text-2xl font-black text-cyan-400 font-outfit mt-0.5">0</div>
+                </div>
+                <div class="glass-card p-3 rounded-2xl border-amber-500/30">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold">Pencapaian</div>
+                    <div id="finalStars" class="text-lg text-amber-400 mt-1 flex justify-center gap-1">
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SENARAI ANALISIS JAWAPAN -->
+            <div class="flex-1 overflow-y-auto pr-1">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-cyan-300 mb-2.5 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check"></i> Rekod Perkataan Diambil
+                </h3>
+                <div id="historyList" class="flex flex-col gap-2">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+
+            <button id="btnRestart" class="glow-button w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl text-lg font-bold text-white shadow-xl flex items-center justify-center gap-2">
+                <i class="fa-solid fa-rotate-right"></i> Main Lagi
+            </button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT GAME ENGINE -->
+    <script>
+        /* ===================================================================
+           1. AUDIO ENGINE (Web Audio API)
+           =================================================================== */
+        class AudioController {
+            constructor() { this.ctx = null; }
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            }
+            playMove() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.08);
+            }
+            playCollect() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99].forEach((f, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(f, now + i * 0.05);
+                    gain.gain.setValueAtTime(0.25, now + i * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.15);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.05); osc.stop(now + i * 0.05 + 0.15);
+                });
+            }
+            playWrong() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.linearRampToValueAtTime(90, now + 0.2);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(now + 0.2);
+            }
+        }
+        const audio = new AudioController();
+
+        /* ===================================================================
+           2. DATA KATA NAMA AM (ARAS 4)
+           =================================================================== */
+        const MISSIONS = [
+            {
+                id: 'ABSTRAK',
+                title: 'Kumpul Kata Nama Am ABSTRAK',
+                desc: 'Kata nama am yang merujuk konsep, sifat, atau idea (tidak berwujud fizikal).',
+                valid: ['kebersihan', 'kejayaan', 'kedamaian', 'kebaikan', 'kebebasan', 'cita-cita', 'impian', 'keberanian'],
+                invalid: ['kereta', 'sekolah', 'pensel', 'kucing', 'hospital', 'meja', 'burung', 'rumah']
+            },
+            {
+                id: 'KONKRIT',
+                title: 'Kumpul Kata Nama Am KONKRIT',
+                desc: 'Kata nama am benda/tempat yang boleh dilihat dan disentuh secara fizikal.',
+                valid: ['kereta', 'rumah', 'pensel', 'hospital', 'sekolah', 'basikal', 'komputer', 'meja'],
+                invalid: ['kebersihan', 'kejayaan', 'kedamaian', 'kebaikan', 'kebebasan', 'cita-cita', 'impian']
+            },
+            {
+                id: 'INSTITUSI',
+                title: 'Kumpul Kata Nama Am INSTITUSI',
+                desc: 'Kata nama am merujuk organisasi atau tempat perkhidmatan awam.',
+                valid: ['perpustakaan', 'universiti', 'sekolah', 'hospital', 'pejabat', 'klinik', 'bank'],
+                invalid: ['kucing', 'keberanian', 'pensel', 'kasut', 'kejayaan', 'epal', 'kedamaian']
+            }
+        ];
+
+        /* ===================================================================
+           3. GAME CANVAS ENGINE & VARIABLES
+           =================================================================== */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
+        let score = 0;
+        let lives = 3;
+        let correctCount = 0;
+        let gameSpeed = 6;
+        let currentMissionIdx = 0;
+        let currentMission = MISSIONS[0];
+        let wordHistory = [];
+
+        // Lanes Y positions (3 lanes: Top=0, Mid=1, Bot=2)
+        let lanesY = [0, 0, 0];
+        let currentLane = 1; // Start in middle lane
+        let playerY = 0;
+        let playerTargetY = 0;
+
+        let spawnTimer = 0;
+        let wordItems = [];
+        let particles = [];
+        let bgOffset = 0;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const margin = canvas.height * 0.25;
+            const usableHeight = canvas.height - margin * 1.5;
+            lanesY = [
+                margin,
+                margin + usableHeight / 2,
+                margin + usableHeight
+            ];
+            playerTargetY = lanesY[currentLane];
+            if (playerY === 0) playerY = playerTargetY;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        /* Player Character Drawing */
+        function drawPlayer(x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Shadow
+            ctx.beginPath();
+            ctx.ellipse(0, 22, 24, 8, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.fill();
+
+            // Body (Cyber Runner Robot)
+            ctx.beginPath();
+            ctx.arc(0, 0, 22, 0, Math.PI * 2);
+            ctx.fillStyle = '#06b6d4';
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#67e8f9';
+            ctx.stroke();
+
+            // Visor / Eyes
+            ctx.beginPath();
+            ctx.roundRect(4, -8, 14, 10, 4);
+            ctx.fillStyle = '#a855f7';
+            ctx.fill();
+
+            // Jetpack Spark (Moving back)
+            ctx.beginPath();
+            ctx.arc(-22, 0, 8 + Math.random() * 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        /* Spawning Floating Word Items */
+        class WordItem {
+            constructor(laneIdx, word, isCorrect, category) {
+                this.lane = laneIdx;
+                this.x = canvas.width + 100;
+                this.y = lanesY[laneIdx];
+                this.word = word;
+                this.isCorrect = isCorrect;
+                this.category = category;
+                this.radius = 42;
+                this.active = true;
+                this.hue = isCorrect ? 160 : 340; // Greenish vs Reddish hint
+            }
+
+            update() {
+                this.x -= gameSpeed;
+                if (this.x < -150) this.active = false;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Orb Glow
+                ctx.shadowColor = `hsl(${this.hue}, 90%, 50%)`;
+                ctx.shadowBlur = 15;
+
+                // Orb Body
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${this.hue}, 80%, 25%, 0.85)`;
+                ctx.fill();
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = `hsl(${this.hue}, 100%, 70%)`;
+                ctx.stroke();
+
+                // Word Label
+                ctx.shadowBlur = 4;
+                ctx.shadowColor = 'black';
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 15px Fredoka, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.word, 0, 0);
+
+                ctx.restore();
+            }
+        }
+
+        /* Particle Blast */
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                this.radius = Math.random() * 5 + 2;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8;
+                this.alpha = 1;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                this.alpha -= 0.03;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        /* ===================================================================
+           4. GAME CONTROLS & LOGIC
+           =================================================================== */
+        function moveLane(dir) {
+            if (gameState !== 'PLAYING') return;
+            audio.init();
+            if (dir === 'UP' && currentLane > 0) {
+                currentLane--;
+                audio.playMove();
+            } else if (dir === 'DOWN' && currentLane < 2) {
+                currentLane++;
+                audio.playMove();
+            }
+            playerTargetY = lanesY[currentLane];
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') moveLane('UP');
+            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') moveLane('DOWN');
+        });
+
+        document.getElementById('btnUp').addEventListener('click', () => moveLane('UP'));
+        document.getElementById('btnDown').addEventListener('click', () => moveLane('DOWN'));
+
+        function startNewGame() {
+            audio.init();
+            score = 0;
+            lives = 3;
+            correctCount = 0;
+            gameSpeed = 6;
+            wordItems = [];
+            particles = [];
+            wordHistory = [];
+            currentLane = 1;
+            playerY = lanesY[1];
+            playerTargetY = lanesY[1];
+
+            // Pick mission
+            currentMissionIdx = Math.floor(Math.random() * MISSIONS.length);
+            currentMission = MISSIONS[currentMissionIdx];
+
+            document.getElementById('missionText').textContent = currentMission.title;
+            updateHeartsUI();
+            document.getElementById('scoreText').textContent = score;
+
+            document.getElementById('startModal').classList.add('hidden');
+            document.getElementById('resultsModal').classList.add('hidden');
+            gameState = 'PLAYING';
+        }
+
+        function updateHeartsUI() {
+            const container = document.getElementById('heartsContainer');
+            container.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                if (i < lives) {
+                    container.innerHTML += '<i class="fa-solid fa-heart text-rose-500 animate-pulse"></i>';
+                } else {
+                    container.innerHTML += '<i class="fa-regular fa-heart text-slate-600"></i>';
+                }
+            }
+        }
+
+        function spawnWords() {
+            spawnTimer++;
+            if (spawnTimer > 75) {
+                spawnTimer = 0;
+
+                // Pick a random lane
+                const lane = Math.floor(Math.random() * 3);
+                const isCorrect = Math.random() < 0.55;
+
+                let wordStr = '';
+                if (isCorrect) {
+                    wordStr = currentMission.valid[Math.floor(Math.random() * currentMission.valid.length)];
+                } else {
+                    wordStr = currentMission.invalid[Math.floor(Math.random() * currentMission.invalid.length)];
+                }
+
+                // Avoid duplicating word in active lane
+                if (!wordItems.some(item => item.word === wordStr)) {
+                    wordItems.push(new WordItem(lane, wordStr, isCorrect, currentMission.id));
+                }
+            }
+        }
+
+        function checkCollisions() {
+            const playerX = 120; // Fixed horizontal position for player
+
+            wordItems.forEach((item) => {
+                if (!item.active) return;
+
+                const dx = item.x - playerX;
+                const dy = item.y - playerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < item.radius + 22) {
+                    item.active = false;
+
+                    // Particle explosion
+                    for (let i = 0; i < 20; i++) {
+                        particles.push(new Particle(item.x, item.y, item.isCorrect ? '#34d399' : '#f87171'));
+                    }
+
+                    if (item.isCorrect) {
+                        score += 150;
+                        correctCount++;
+                        audio.playCollect();
+                        document.getElementById('scoreText').textContent = score;
+
+                        wordHistory.push({
+                            word: item.word,
+                            isCorrect: true,
+                            mission: currentMission.title
+                        });
+
+                        // Gradually increase speed
+                        if (correctCount % 5 === 0) gameSpeed += 0.5;
+
+                    } else {
+                        lives--;
+                        audio.playWrong();
+                        updateHeartsUI();
+
+                        wordHistory.push({
+                            word: item.word,
+                            isCorrect: false,
+                            mission: currentMission.title
+                        });
+
+                        if (lives <= 0) {
+                            gameOver();
+                        }
+                    }
+                }
+            });
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            document.getElementById('resultsModal').classList.remove('hidden');
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalCorrect').textContent = correctCount;
+
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+
+            if (wordHistory.length === 0) {
+                historyList.innerHTML = '<div class="text-slate-400 text-center py-4 text-xs">Tiada perkataan diambil.</div>';
+            } else {
+                wordHistory.forEach((h, idx) => {
+                    const row = document.createElement('div');
+                    row.className = `glass-card p-3 rounded-xl flex justify-between items-center text-xs border ${
+                        h.isCorrect ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-rose-500/40 bg-rose-950/20'
+                    }`;
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-white">${idx + 1}. "${h.word}"</span>
+                            <span class="text-[10px] text-slate-400">(${h.mission})</span>
+                        </div>
+                        <span class="${h.isCorrect ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}">
+                            ${h.isCorrect ? '<i class="fa-solid fa-check"></i> Tepat' : '<i class="fa-solid fa-xmark"></i> Salah'}
+                        </span>
+                    `;
+                    historyList.appendChild(row);
+                });
+            }
+        }
+
+        /* ===================================================================
+           5. RENDER LOOP
+           =================================================================== */
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // A. SCROLLING BACKGROUND
+            bgOffset = (bgOffset + gameSpeed * 0.5) % 60;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let x = -bgOffset; x < canvas.width; x += 60) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+
+            // B. DRAW 3 LANES
+            lanesY.forEach((ly, idx) => {
+                ctx.beginPath();
+                ctx.moveTo(0, ly);
+                ctx.lineTo(canvas.width, ly);
+                ctx.strokeStyle = (idx === currentLane && gameState === 'PLAYING') 
+                    ? 'rgba(56, 189, 248, 0.4)' 
+                    : 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = (idx === currentLane && gameState === 'PLAYING') ? 4 : 2;
+                ctx.stroke();
+            });
+
+            if (gameState === 'PLAYING') {
+                // Smooth Y movement LERP
+                playerY += (playerTargetY - playerY) * 0.25;
+
+                // Draw Player
+                drawPlayer(120, playerY);
+
+                // Spawning & Word Updates
+                spawnWords();
+                wordItems.forEach((item) => {
+                    item.update();
+                    item.draw(ctx);
+                });
+                wordItems = wordItems.filter(item => item.active);
+
+                checkCollisions();
+            }
+
+            // Draw Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                p.draw(ctx);
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        /* ===================================================================
+           6. EVENT LISTENERS
+           =================================================================== */
+        document.getElementById('btnStart').addEventListener('click', startNewGame);
+        document.getElementById('btnRestart').addEventListener('click', startNewGame);
+
+        window.onload = () => {
+            render();
+        };
+    </script>
+</body>
+</html>
